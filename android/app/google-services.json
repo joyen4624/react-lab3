@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "373519016721",
+    "project_id": "ktgkapp-e6163",
+    "storage_bucket": "ktgkapp-e6163.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373519016721:android:0072af8f75d0e3a88462b0",
+        "android_client_info": {
+          "package_name": "com.ktgkapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDs9tObKGJG2_bPHbgApPQ5sK6fujBCwK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
