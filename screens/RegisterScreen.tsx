@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { getAuth, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import { getApp } from '@react-native-firebase/app';
 
 export default function RegisterScreen({ navigation }: any) {
@@ -48,12 +49,28 @@ export default function RegisterScreen({ navigation }: any) {
 
       const auth = getAuth(getApp());
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      addLog(`✅ Tạo tài khoản thành công: ${userCredential.user.uid}`);
+      addLog(`✅ Tạo tài khoản thành công: ${uid}`);
+
+      // 🔥 Ghi thông tin người dùng vào Firestore
+      await firestore()
+        .collection('users')
+        .doc(uid)
+        .set(
+          {
+            email,
+            role: 'user', // mặc định là user
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true } // tránh ghi đè nếu đã có
+        );
+
+      addLog('✅ Đã ghi thông tin user vào Firestore');
       Alert.alert('Thành công', 'Tài khoản đã được tạo!');
       setLoading(false);
 
-      setTimeout(() => navigation.navigate('Login'), 1500);
+      setTimeout(() => navigation.navigate('Login'), 1000);
     } catch (error: any) {
       setLoading(false);
       addLog(`❌ Lỗi đăng ký: ${error.message}`);

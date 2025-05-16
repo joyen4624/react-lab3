@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { getAuth, signInWithEmailAndPassword } from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 type Props = {
@@ -38,16 +39,37 @@ export default function LoginScreen({ navigation }: Props) {
       setLoading(true);
       console.log('🚀 Đang đăng nhập với:', email);
 
-      await signInWithEmailAndPassword(auth, email, password);
+      // 🔐 Đăng nhập Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      console.log('✅ Đăng nhập thành công!');
+      console.log('✅ Đăng nhập Firebase Auth thành công:', uid);
+
+      // 🔍 Lấy thông tin role từ Firestore
+      const userDoc = await firestore().collection('users').doc(uid).get();
+
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        const role = data?.role;
+
+        console.log('📦 Role:', role);
+
+        if (role === 'admin') {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'AdminHome' }], // ⚠️ Tên màn hình admin bạn đã cấu hình trong navigator
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }], // ⚠️ Màn hình chính cho user
+          });
+        }
+      } else {
+        Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng!');
+      }
+
       setLoading(false);
-
-      // Reset điều hướng sang Home, xóa lịch sử stack
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
     } catch (error: any) {
       setLoading(false);
       console.log('❌ Lỗi đăng nhập:', error.message);
@@ -57,7 +79,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Restaurant App</Text>
+      <Text style={styles.title}>Kami Spa App</Text>
 
       <TextInput
         style={styles.input}

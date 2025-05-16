@@ -3,141 +3,162 @@ import {
   View,
   Text,
   FlatList,
-  Image,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  ActivityIndicator,
+  TextInput,
+  Image,
 } from 'react-native';
+import { Alert } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import { Appbar, Card } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from './types';
+import { Appbar, FAB } from 'react-native-paper';
+import auth from '@react-native-firebase/auth';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+// 212482010151 - Lê Sỹ Hoài
 
-const imageMap: Record<string, any> = {
-  'chinese.png': require('../assets/images/chinese.png'),
-  'south-indian.png': require('../assets/images/south-indian.png'),
-  'beverages.png': require('../assets/images/beverages.png'),
-  'north-indian.png': require('../assets/images/north-indian.png'),
-  'banana.png': require('../assets/images/banana.png'),
-  'biryani.png': require('../assets/images/biryani.png'),
-  'mexican.png': require('../assets/images/mexican.png'),
-  'pizza.png': require('../assets/images/pizza.png'),
-  'pizza (1).png': require('../assets/images/pizza (1).png'),
-  'desserts.png': require('../assets/images/desserts.png'),
-  'ice-creams.png': require('../assets/images/ice-creams.png'),
-  'food.jpeg': require('../assets/images/food.jpeg'),
-  'placeholder.png': require('../assets/images/placeholder-food.png'),
-};
-
-export default function HomeScreen() {
-  const [foods, setFoods] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const navigation = useNavigation<NavigationProp>();
+export default function HomeScreen({ navigation }: any) {
+  const [services, setServices] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     const unsubscribe = firestore()
-      .collection('foods')
+      .collection('services')
       .onSnapshot(snapshot => {
-        const items = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-          };
-        });
-        setFoods(items);
-        setLoading(false);
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as any),
+        }));
+        setServices(data);
       });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const user = auth().currentUser;
+    if (user) {
+      const email = user.email || '';
+      setUsername(email.split('@')[0]);
+    }
+  }, []);
+
+  const filteredServices = services.filter(service =>
+    service.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   const renderItem = ({ item }: any) => (
     <TouchableOpacity
-      style={styles.item}
-      onPress={() => navigation.navigate('Category', { category: item.category })}>
-      <Card style={styles.card} elevation={2}>
-        <Card.Content style={styles.cardContent}>
-          <Image
-            source={imageMap[item.image] || imageMap['placeholder.png']}
-            style={styles.image}
-          />
-          <Text style={styles.label}>{item.title}</Text>
-        </Card.Content>
-      </Card>
+      style={styles.serviceBox}
+      onPress={() => navigation.navigate('ServiceDetail', { id: item.id })}
+    >
+      <Text style={styles.serviceName} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.price}>{item.price?.toLocaleString()} đ</Text>
     </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
-        <ActivityIndicator size="large" color="#d32f2f" />
-      </View>
-    );
-  }
+
+  const handleLogout = async () => {
+    try {
+      await auth().signOut();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.message);
+    }
+  };
+  
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Appbar.Header style={{ backgroundColor: 'white' }}>
-        <Appbar.Action icon="menu" onPress={() => {}} />
-        <Appbar.Content title="Restaurant App" titleStyle={{ textAlign: 'center', color: 'red' }} />
-        <Appbar.Action icon="cart" onPress={() => navigation.navigate('Cart')} />
+    <View style={styles.container}>
+      <Appbar.Header style={{ backgroundColor: '#f05a72' }}>
+      <Appbar.Content title={username.toUpperCase() || 'KAMI SPA'} />
+      <Appbar.Action icon="logout" onPress={handleLogout} />
       </Appbar.Header>
 
-      <Text style={styles.header}>Cuisine</Text>
+      <Image
+        source={require('../assets/images/logolab3.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
+
+      <Text style={styles.heading}>Danh sách dịch vụ</Text>
+
+      <TextInput
+        placeholder="Tìm kiếm dịch vụ..."
+        value={search}
+        onChangeText={setSearch}
+        style={styles.search}
+      />
 
       <FlatList
-        data={foods}
+        data={filteredServices}
         keyExtractor={item => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.grid}
         renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 80 }}
       />
-    </SafeAreaView>
+
+      <FAB
+        icon="plus"
+        style={styles.fab}
+        onPress={() => navigation.navigate('AddService')}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: { flex: 1, backgroundColor: '#fff' },
+  logo: {
+    alignSelf: 'center',
+    width: 160,
+    height: 80,
+    marginTop: 12,
   },
-  header: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginVertical: 12,
-    marginLeft: 16,
-    color: 'crimson',
-  },
-  grid: {
-    paddingHorizontal: 12,
-    paddingBottom: 16,
-  },
-  item: {
-    flex: 1,
-    margin: 8,
-  },
-  card: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  cardContent: {
-    alignItems: 'center',
-  },
-  image: {
-    width: 64,
-    height: 64,
-    resizeMode: 'contain',
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 14,
+  heading: {
+    fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
+    marginLeft: 16,
+    marginTop: 8,
+    color: '#333',
+  },
+  search: {
+    margin: 16,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  serviceBox: {
+    marginHorizontal: 16,
+    marginVertical: 6,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 10,
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#444',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    backgroundColor: '#f05a72',
   },
 });
